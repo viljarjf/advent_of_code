@@ -9,9 +9,9 @@ with open("input10.txt", "r") as f:
         for _ in range(len(l.strip().split())):
             # draw
             if abs(c % width - x) <= 1:
-                line += "#"
+                line += "██"
             else:
-                line += "."
+                line += "  "
 
             # clock
             c += 1
