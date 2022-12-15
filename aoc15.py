@@ -77,7 +77,7 @@ print(x_empty)
 search_max = 4000000
 for y in range(search_max):
     search = find_empty(y, 0, search_max, False, True)
-    if not y % 1000:
+    if not y % 10000:
         print(f"@ {y = }")
     if search < search_max:
         x = search
