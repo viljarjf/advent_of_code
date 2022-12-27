@@ -216,6 +216,8 @@ for move in moves:
         for _ in range(int(move)):
             x_min, x_delta = row_lims[pos[0]]
             y_min, y_delta = col_lims[pos[1]]
+            old_dir = movedir.copy()
+            old_pos = pos.copy()
             pos += movedir
             # boundary
             if pos[0] < y_min or pos[0] >= y_min + y_delta:
@@ -224,9 +226,8 @@ for move in moves:
                 pos, movedir = transition(pos, movedir)
             # check if we crash
             if walls.get(tuple(pos)) is not None:
-                pos -= movedir
-                pos[0] = (pos[0] - y_min) % y_delta + y_min
-                pos[1] = (pos[1] - x_min) % x_delta + x_min
+                pos = old_pos
+                movedir = old_dir
             test2[pos[0], pos[1]] = POS
     
     else:
