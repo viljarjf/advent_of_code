@@ -1,35 +1,49 @@
 from __future__ import annotations
 from typing import TextIO, Iterable
 
-
-class MapRange:
-    def __init__(self, dst: int, src: int, size: int):
-        self.dst = dst
-        self.src = src
-        self.size = size
-        self.range = range(src, src + size)
-
-    def __contains__(self, item: int) -> bool:
-        return item in self.range
-
-    def __getitem__(self, ind: int) -> int:
-        return self.dst + (ind - self.src)
-
-
 class Map:
+
+    class Range:
+        def __init__(self, dst: int, src: int, size: int):
+            self.dst = dst
+            self.src = src
+            self.size = size
+            self.range = range(src, src + size)
+
+        def __contains__(self, item: int) -> bool:
+            return item in self.range
+
+        def __getitem__(self, ind: int) -> int:
+            return self.dst + (ind - self.src)
+
+    @classmethod
+    def from_file(cls, inp: TextIO) -> Map:
+        m = cls()
+        while line := inp.readline().strip():
+            dst, src, l = line.split(" ")
+            dst, src, l = int(dst), int(src), int(l)
+            m.add_range(dst, src, l)
+        return m
+
     def __init__(self):
-        self.ranges: list[MapRange] = []
+        self.ranges: list[self.Range] = []
 
     def __getitem__(self, ind: int) -> int:
-        for range in self.ranges:
-            if ind in range:
-                return range[ind]
+        for r in self.ranges:
+            if ind in r:
+                return r[ind]
         return ind
 
     def add_range(self, dst: int, src: int, size: int):
-        self.ranges.append(MapRange(dst, src, size))
+        self.ranges.append(self.Range(dst, src, size))
 
     def get_break_points(self) -> list[int]:
+        """
+        Get a list of possible break points, 
+        i.e. points where the difference between values at consecutive indices are not 1. 
+        The list will always contain all break points, 
+        but will also contain points which are not.
+        """
         points = []
         for r in self.ranges:
             points += [
@@ -57,7 +71,7 @@ class MapSequence:
             ind = map[ind]
         return ind
 
-    def reverse(self) -> MapSequence:
+    def reversed(self) -> MapSequence:
         reversed_maps = []
         for map in reversed(self.maps):
             new_map = Map()
@@ -67,20 +81,17 @@ class MapSequence:
         return MapSequence(reversed_maps)
 
     def get_break_points(self) -> list:
+        """
+        Get a list of possible break points, 
+        i.e. points where the difference between values at consecutive indices are not 1. 
+        The list will always contain all break points, 
+        but will also contain points which are not.
+        """
         points = []
-        for m in self.reverse().maps:
+        for m in self.reversed().maps:
             points += m.get_break_points()
             points = [m[p] for p in points]
         return points
-
-
-def get_map(inp: TextIO) -> Map:
-    m = Map()
-    while line := inp.readline().strip():
-        dst, src, l = line.split(" ")
-        dst, src, l = int(dst), int(src), int(l)
-        m.add_range(dst, src, l)
-    return m
 
 
 def main():
@@ -90,10 +101,10 @@ def main():
         inp.readline()  # empty
 
         maps = []
-
         while inp.readline().strip():
-            maps.append(get_map(inp))
-        maps = MapSequence(maps)
+            maps.append(Map.from_file(inp))
+
+    maps = MapSequence(maps)
 
     locs = []
     for seed in seeds:
@@ -103,7 +114,7 @@ def main():
     seed_ranges = [
         range(seeds[i], seeds[i] + seeds[i + 1]) for i in range(0, len(seeds), 2)
     ]
-    reverse_maps = maps.reverse()
+    reverse_maps = maps.reversed()
     locs = []
     for loc in reverse_maps.get_break_points():
         seed = reverse_maps[loc]
