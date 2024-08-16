@@ -27,7 +27,7 @@ def get_spaces(line: list[int], ans: str) -> Iterable[list[int]]:
                     continue
                 for d in divide(items - i, boxes - 1, layer + 1, ans[len(cur_str):]):
                     yield cur_ans + d
-    
+
     for spaces in divide(space_size, num_spaces, 0, ans):
         yield spaces
 
@@ -57,50 +57,28 @@ def main():
     
     num_possible = 0
     long_num_possible = 0
-    with open("12", "r", encoding="utf-8") as inp:
-        # parse
+    from tqdm import tqdm
+    with open("12", "r", encoding="utf-8") as inp, tqdm(total=1000) as pbar:
         for line in inp:
             line, blocks = line.strip().split(" ")
             blocks = [int(i) for i in blocks.split(",")]
 
-            for repr in get_reprs(blocks, line):
-                num_possible += 1
+            num_possible += sum(1 for _ in get_reprs(blocks, line))
+
+            repetitions = 5
+            line = "?".join([line] * repetitions)
+            blocks = blocks * repetitions
+
+            long_num_possible += sum(1 for _ in get_reprs(blocks, line))
             
-            s = np.array([i for i in get_spaces(blocks, line) if compare_line_str(line, get_repr(i))])
-            
-            line2 = "?".join([line]*2)
-            blocks2 = blocks * 2
-            s2 = np.array([i for i in get_spaces(blocks2, line2) if compare_line_str(line2, get_repr(i))])
+            pbar.update(1)
 
-            single = s.shape[0]
-            increase = s2.shape[0]
-            r = Fraction(increase, single)
-
-            if r.denominator == 1:
-                long_num_possible += r ** 3 * increase
-                continue
-            print("Long")
-            print(line, blocks)
-
-            line3 = "?".join([line]*3)
-            blocks3 = blocks * 3
-            s3 = np.array([i for i in get_spaces(blocks3, line3) if compare_line_str(line3, get_repr(i))])
-            line4 = "?".join([line]*4)
-            blocks4 = blocks * 4
-            s4 = np.array([i for i in get_spaces(blocks4, line4) if compare_line_str(line4, get_repr(i))])
-
-            print(s.shape)
-            print(s2.shape)
-            print(s3.shape)
-            print(s4.shape)
-
-            line5 = "?".join([line]*5)
-            blocks5 = blocks * 5
-            num_possible += sum(1 for _ in get_reprs(blocks5, line5))
-                
     print()
     print(num_possible)
     print(long_num_possible)
     
 if __name__ == "__main__":
+    import time
+    start = time.perf_counter()
     main()
+    print(time.perf_counter() - start)
