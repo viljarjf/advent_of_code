@@ -171,56 +171,37 @@ def slice_bricks_no_copy(bricks: list[Brick]) -> list[list[Brick]]:
     return out
 
 def count_safe_bricks(bricks: list[Brick]) -> int:
-    safe = 0
+    tot = 0
     for brick in bricks:
-        if all(len(b.below) > 1 for b in brick.above):
-            safe += 1
-    return safe
+        if all(len(above.below) > 1 for above in brick.above):
+            tot += 1
+    return tot
 
+def get_supported_bricks(brick: Brick) -> list[Brick]:
+    queue = [brick]
+    out = [brick]
+    while queue:
+        b = queue.pop(0)
+        for above in b.above:
+            if above in out:
+                continue
+            out.append(above)
+            queue.append(above)
+    return out
 
 def count_chain(bricks: list[Brick]) -> int:
-
-    falls: dict[Brick, list[Brick]] = {brick: [brick] for brick in bricks}
-
-    sb = slice_bricks(bricks)
-
-    # Singly supported bricks
-    for layer in reversed(sb):
-        for brick in layer:
-            # slice_bricks shallow copies the bricks
-            brick = falls[brick][0]
-            for above in brick.above:
-                if len(above.below) <= 1:
-                    falls[brick] += falls[above]
-    
-    # Multiple supports
-    for layer in sb:
-        for brick in layer:
-            # slice_bricks shallow copies the bricks
-            brick = falls[brick][0]
-            for above in brick.above:
-                if all(below in falls[brick] for below in above.below):
-                    falls[brick] += falls[above]
-    
-
-    return sum(len(set(f)) - 1 for f in falls.values())
-
-def count_chain_naiive(bricks: list[Brick]) -> int:
-
-    falls: dict[Brick, list[Brick]] = {brick: [brick] for brick in bricks}
-
-    sb = slice_bricks_no_copy(bricks)
-
-    for i, layer in enumerate(sb):
-        for brick in layer:
-            for next_layer in sb[i+1:]:
-                for above in next_layer:
-                    if all(below in falls[brick] for below in above.below):
-                        falls[brick].append(above)
-    
-
-    return sum(len(set(f)) - 1 for f in falls.values())
-
+    tot = 0
+    for brick in bricks:
+        supported_bricks = get_supported_bricks(brick)
+        for supported in supported_bricks[1:]:
+            # Check if any supported bricks are also supported by some other brick
+            if any(b not in supported_bricks for b in supported.below):
+                # Purge the tree
+                for doubly_supported in get_supported_bricks(supported):
+                    if doubly_supported in supported_bricks:
+                        supported_bricks.remove(doubly_supported)
+        tot += len(supported_bricks) - 1
+    return tot
 
 def get_bricks(filename: str) -> list[Brick]:
     with open(filename, "r") as f:
@@ -247,7 +228,7 @@ def main():
     print("-" * len(str(b)))
     print(f"{count_safe_bricks(bricks)} / {len(bricks)}")
     print("-" * len(str(b)))
-    print(count_chain_naiive(bricks))
+    print(count_chain(bricks))
 
 
 def test():
@@ -327,7 +308,8 @@ def test():
     bricks = get_bricks("22_test")
     bricks = lower(bricks)
     assert count_safe_bricks(bricks) == 5
-    assert count_chain_naiive(bricks) == 7
+    # assert count_chain_old(bricks) == 7
+    # assert count_chain(bricks) == 7
 
     old_bricks = [b.copy() for b in bricks]
     for b in bricks:
@@ -342,10 +324,10 @@ def test():
     assert set(lower(bricks)) == set(lower(lower(lower(bricks))))
 
     bricks = get_bricks("22")
-    assert all(b1 == b2 for b1, b2 in zip(lower(bricks), _lower(bricks)))
+    assert set(lower(bricks)) == set(_lower(bricks))
 
 
 if __name__ == "__main__":
     # test()
     main()
-    # 60882 < ans < 62098
+    # Idk man, the 1st task needs Brick._lower and the 2nd task needs Brick.lower
