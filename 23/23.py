@@ -1,5 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
+from collections import defaultdict
+
 
 WALL = 0
 PATH = 1
@@ -16,6 +18,10 @@ LOOKUP = {
     "v": ICE_DOWN,
     "<": ICE_LEFT
 }
+
+Node = tuple[tuple[int, int], tuple[int, int], list[tuple[int, int]]]
+FullGraph = list[Node]
+Graph = list[tuple[tuple[int, int], tuple[int, int], int]]
 
 def find_intersections(map: np.ndarray) -> list[tuple[int, int]]:
     out = [
@@ -38,7 +44,7 @@ def find_intersections(map: np.ndarray) -> list[tuple[int, int]]:
     out.append((map.shape[0] - 1, map.shape[1] - 2)) # end
     return out
 
-def explore_single(map: np.ndarray, pos: tuple[int, int], initial: tuple[int, int], intersections: list[tuple[int, int]]) -> tuple[tuple[int, int], tuple[int, int], int]:
+def explore_single(map: np.ndarray, pos: tuple[int, int], initial: tuple[int, int], intersections: list[tuple[int, int]]) -> Node:
     dy, dx = pos[0] - initial[0], pos[1] - initial[1]
     if [
         True,       # Wall
@@ -49,11 +55,10 @@ def explore_single(map: np.ndarray, pos: tuple[int, int], initial: tuple[int, in
         dx != -1,   # left
     ][map[pos]]:
         return None
-    queue = [pos]
+    queue = [(pos, [])]
     explored = [initial]
-    segment_length = 1
     while queue:
-        pos = queue.pop(0)
+        pos, segment = queue.pop(0)
         if pos in explored:
             continue
         explored.append(pos)
@@ -61,19 +66,18 @@ def explore_single(map: np.ndarray, pos: tuple[int, int], initial: tuple[int, in
             break
         if map[pos] == WALL:
             continue
-        segment_length += 1
-        queue.append((pos[0] + 1, pos[1]))
-        queue.append((pos[0] - 1, pos[1]))
-        queue.append((pos[0], pos[1] + 1))
-        queue.append((pos[0], pos[1] - 1))
+        queue.append(((pos[0] + 1, pos[1]), segment + [pos]))
+        queue.append(((pos[0] - 1, pos[1]), segment + [pos]))
+        queue.append(((pos[0], pos[1] + 1), segment + [pos]))
+        queue.append(((pos[0], pos[1] - 1), segment + [pos]))
 
     return (
         initial, # start
         pos,     # end
-        segment_length
+        segment + [pos]
     )
 
-def explore(map: np.ndarray):
+def explore(map: np.ndarray) -> FullGraph:
     intersections = find_intersections(map)
     out = []
 
@@ -91,38 +95,87 @@ def explore(map: np.ndarray):
                 out.append(res)
     return out
 
-def find_maximum_length(graph: list[tuple[tuple[int, int], tuple[int, int], int]]) -> int:
+def find_maximum_length_path(graph: Graph) -> list[tuple[int, int]]:
+    outgoing = defaultdict(list)
+    incoming = defaultdict(list)
+    edge_lengths = {}
+    for edge in graph:
+        start, end, length = edge
+        outgoing[start].append(end)
+        incoming[end].append(start)
+        edge_lengths[start + end] = length
+    
+    start = (0, 1)
     max_y = max(i[1][0] for i in graph)
-    target = (max_y, max_y - 1)
-    queue = [(
-        (0, 1), # start
-        0       # length
-    )]
-    while queue:
-        pos, length = queue.pop(0)
-        if pos == target:
-            break
-        
-    return length
+    end = (max_y, max_y - 1)
 
-def plot(map):
+    incoming[start] = []
+    outgoing[end] = []
+    
+    lengths = defaultdict(lambda: 0)
+    queue = [(
+        0,
+        start,
+        [start]
+    )]
+    end_path = []
+    i = 0
+    while queue:
+        i += 1
+        length, pos, visited = queue.pop()
+        if length > lengths[pos]:
+            lengths[pos] = length
+            if pos == end:
+                end_path = visited
+        for edge in outgoing[pos]:
+            if edge in visited:
+                continue
+            queue.append((
+                length + edge_lengths[pos + edge],
+                edge,
+                visited + [edge]
+            ))
+    return end_path
+
+def plot(map: np.ndarray):
     plt.figure()
     plt.imshow(map)
+    plt.axis("off")
     plt.show()
+
+def plot_path(map: np.ndarray, path: list[tuple[int, int]], graph_with_segments: FullGraph):
+    map = map.copy()
+    map[map > 0] = 1
+    segments = {start + end : segment for start, end, segment in graph_with_segments}
+    for start, end in zip(path[:-1], path[1:]):
+        for tile in segments[start + end]:
+            map[tile] = 2
+    for pos in path:
+        map[pos] = 3
+    plot(map)
+
+def full_workflow(graph_with_segments: FullGraph, map: np.ndarray):
+    graph = [(start, end, len(segment)) for start, end, segment in graph_with_segments]
+    lengths = {start + end : length for start, end, length in graph}
+    longest_path = find_maximum_length_path(graph)
+    plot_path(map, longest_path, graph_with_segments)
+    lengths = {start + end : length for start, end, length in graph}
+    print(sum(lengths[start + end] for start, end in zip(longest_path[:-1], longest_path[1:])))
 
 def main():
     
     map = []
-    with open("23_test", "r") as f:
+    with open("23", "r") as f:
         for line in f:
             map.append([LOOKUP[tile] for tile in line.strip()])
     map = np.array(map)
 
     graph = explore(map)
-    plot(map)
-
-    print("\n".join(str(i) for i in graph))
-
+    full_workflow(graph, map)
+    
+    for start, end, length in graph.copy():
+        graph.append((end, start, length))
+    full_workflow(graph, map)
 
 if __name__ == "__main__":
     main()
