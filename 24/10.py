@@ -11,23 +11,37 @@ def get_trailheads(top_map: np.ndarray) -> list[tuple[int, int]]:
     return get_indices_of_height(top_map, 0)
 
 def get_trailhead_score(top_map: np.ndarray, trailhead: tuple[int, int]) -> int:
+    # BFS
     current = [trailhead]
     for i in range(1, 10):
-        next = []
+        nexts = []
         next_height = get_indices_of_height(top_map, i)
         for pos in current:
             for possible in next_height:
                 if (abs(pos[0] - possible[0]) + abs(pos[1] - possible[1])) == 1:
-                    next.append(possible)
-        print(next)
-        current = next
+                    nexts.append(tuple(possible))
+        current = list(set(nexts))
     return len(current)
 
+def get_trailhead_rating(top_map: np.ndarray, trailhead: tuple[int, int]) -> int:
+    # DFS
+    out = 0
+    queue = [(trailhead, 0)]
+    while queue:
+        pos, height = queue.pop()
+        if height == 9:
+            out += 1
+            continue
+        for possible in get_indices_of_height(top_map, height + 1):
+            if (abs(pos[0] - possible[0]) + abs(pos[1] - possible[1])) == 1:
+                queue.append((tuple(possible), height + 1))
+    return out
+
 def main():
-    top_map = get_map()
+    top_map = get_map(False)
     trailheads = get_trailheads(top_map)
-    print(get_trailhead_score(top_map, trailheads[0]))
-    # print(sum(get_trailhead_score(top_map, trailhead) for trailhead in trailheads))
+    print(sum(get_trailhead_score(top_map, trailhead) for trailhead in trailheads))
+    print(sum(get_trailhead_rating(top_map, trailhead) for trailhead in trailheads))
 
 
 if __name__ == "__main__":
