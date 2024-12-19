@@ -63,12 +63,12 @@ def can_move(map: np.ndarray, pos: tuple[int, int], direction: tuple[int, int]) 
     elif can_move(map, new_pos, direction):
         out = True
 
-    if map[pos] == BOX_LEFT:
+    if map[pos] == BOX_LEFT and direction[1] == 0:
         right = (pos[0], pos[1] + 1)
         map[right] = BOX
         out &= can_move(map, right, direction)
         map[right] = BOX_RIGHT
-    elif map[pos] == BOX_RIGHT:
+    elif map[pos] == BOX_RIGHT and direction[1] == 0:
         left = (pos[0], pos[1] - 1)
         map[left] = BOX
         out &= can_move(map, left, direction)
@@ -85,12 +85,12 @@ def move(map: np.ndarray, pos: tuple[int, int], direction: tuple[int, int]) -> b
     )
     if map[new_pos] != EMPTY:
         move(map, new_pos, direction)
-    if map[pos] == BOX_LEFT:
+    if map[pos] == BOX_LEFT and direction[1] == 0:
         right = (pos[0], pos[1] + 1)
         map[right] = BOX
         move(map, right, direction)
         map[right[0] + direction[0], right[1] + direction[1]] = BOX_RIGHT
-    if map[pos] == BOX_RIGHT:
+    if map[pos] == BOX_RIGHT and direction[1] == 0:
         left = (pos[0], pos[1] - 1)
         map[left] = BOX
         move(map, left, direction)
@@ -100,7 +100,7 @@ def move(map: np.ndarray, pos: tuple[int, int], direction: tuple[int, int]) -> b
     return True
 
 def calculate_score(map: np.ndarray) -> int:
-    boxes = np.argwhere(map == BOX)
+    boxes = np.argwhere((map == BOX) | (map == BOX_LEFT))
     boxes[:, 0] *= 100
     return boxes.sum()
 
@@ -112,6 +112,7 @@ def main():
         pos = np.nonzero(large_map == ROBOT)
         move(large_map, pos, direction)
     print(calculate_score(map))
+    print(calculate_score(large_map))
 
 if __name__ == "__main__":
     main()
